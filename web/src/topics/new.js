@@ -1,7 +1,7 @@
 require('codemirror/lib/codemirror.css');
 require('codemirror/theme/xq-light.css');
 require('codemirror/mode/markdown/markdown.js');
-import style from './style.scss';
+import style from './new.scss';
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
 import {Controlled as CodeMirror} from 'react-codemirror2'
@@ -11,7 +11,7 @@ import API from '../api/index.js';
 import LoadingView from '../loading/loading.js';
 const validate = require('uuid-validate');
 
-class TopicNew extends Component {
+class New extends Component {
   constructor(props) {
     super(props);
     this.api = new API();
@@ -30,6 +30,7 @@ class TopicNew extends Component {
       topic_id: id,
       title: '',
       body: '',
+      draft: false,
       categories: categories,
       preview: false,
       loading: true,
@@ -39,17 +40,24 @@ class TopicNew extends Component {
     this.handleCategoryClick = this.handleCategoryClick.bind(this);
     this.handleBodyChange = this.handleBodyChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleDraft = this.handleDraft.bind(this);
     this.handlePreview = this.handlePreview.bind(this);
   }
 
   componentDidMount() {
     if (validate(this.state.topic_id)) {
-      this.api.topic.show(this.props.match.params.id).then((data) => {
+      this.api.topic.show(this.state.topic_id).then((data) => {
         data.loading = false;
         this.setState(data);
       });
     } else {
-      this.setState({loading: false});
+      this.api.topic.show('draft').then((data) => {
+        if (!data) {
+          data = {};
+        }
+        data.loading = false;
+        this.setState(data);
+      });
     }
     this.api.category.index().then((data) => {
       let category_id = this.state.category_id;
@@ -100,9 +108,21 @@ class TopicNew extends Component {
     if (this.state.submitting) {
       return
     }
-    this.setState({submitting: true});
+    this.setState({submitting: true, draft: false}, () => {
+      this.submitForm();
+    });
+  }
+
+  handleDraft(e) {
+    e.preventDefault();
+    this.setState({submitting: true, draft: true}, () => {
+      this.submitForm();
+    });
+  }
+
+  submitForm() {
     const history = this.props.history;
-    const data = {title: this.state.title, body: this.state.body, category_id: this.state.category_id};
+    const data = {title: this.state.title, body: this.state.body, category_id: this.state.category_id, draft: this.state.draft};
     // TODO should update submitting always
     if (validate(this.state.topic_id)) {
       this.api.topic.update(this.state.topic_id, data).then((data) => {
@@ -127,7 +147,7 @@ class TopicNew extends Component {
     let state = this.state;
     const categories = state.categories.map((c) => {
       return (
-        <span key={c.category_id} className={`${style.category} ${c.category_id === state.category_id ? style.categoryCurrent : ''}`} onClick={(e) => this.handleCategoryClick(e, c.category_id)}>{c.alias}</span>
+        <span key={c.category_id} className={`${style.category} ${c.category_id === state.category_id ? style.active : ''}`} onClick={(e) => this.handleCategoryClick(e, c.category_id)}>{c.alias}</span>
       )
     });
 
@@ -137,7 +157,7 @@ class TopicNew extends Component {
     }
 
     const loadingView = (
-      <div className={style.form_loading}>
+      <div className={style.loading}>
         <LoadingView style='md-ring'/>
       </div>
     )
@@ -150,8 +170,10 @@ class TopicNew extends Component {
         <div>
           <input type='text' name='title' pattern='.{3,}' required value={state.title} autoComplete='off' placeholder='Title *' onChange={this.handleChange} />
         </div>
-        <div className={style.preview}> <FontAwesomeIcon className={style.eye} icon={['far', 'eye']} onClick={this.handlePreview} /> </div>
-        <div className={style.topic_body}>
+        <div className={style.actions}>
+          <FontAwesomeIcon className={style.eye} icon={['far', 'eye']} onClick={this.handlePreview} />
+        </div>
+        <div className={style.body}>
           {
             !state.preview &&
             <CodeMirror
@@ -167,19 +189,32 @@ class TopicNew extends Component {
               onBeforeChange={(editor, data, value) => this.handleBodyChange(editor, data, value)}
             />
           }
-          {
-            state.preview &&
-            <article className={`md ${style.preview_body}`} dangerouslySetInnerHTML={{__html: state.body_html}}>
-            </article>
-          }
+      {
+        state.preview &&
+        <article className={`md ${style.preview}`} dangerouslySetInnerHTML={{__html: state.body_html}}>
+        </article>
+      }
+    </div>
+    <div>
+      {
+        state.submitting &&
+        <div className={style.submitting}>
+          <LoadingView style='sm-ring'/>
+          <span> Submitting </span>
         </div>
-        <div className='action'>
-          <button className='btn submit' disabled={state.submitting}>
-            { state.submitting && <LoadingView style='sm-ring blank'/> }
+      }
+      {
+        !state.submitting &&
+        <div>
+          <button type="submit" className='btn topic' disabled={state.submitting}>
+
             &nbsp;{i18n.t('general.submit')}
           </button>
+          <a href="javascript:;" className={style.draft} onClick={this.handleDraft}>{i18n.t('general.draft')}</a>
         </div>
-      </form>
+      }
+    </div>
+  </form>
     )
 
     return (
@@ -199,4 +234,4 @@ class TopicNew extends Component {
   }
 }
 
-export default TopicNew;
+export default New;

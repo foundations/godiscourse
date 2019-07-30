@@ -5,23 +5,25 @@ import { Link } from 'react-router-dom';
 import API from '../api/index.js';
 import TopicItem from '../topics/item.js';
 
-class UserShow extends Component {
+class Show extends Component {
   constructor(props) {
     super(props);
     this.api = new API();
     this.state = {
+      id: props.match.params.id,
       user: {},
       topics: [],
     }
   }
 
   componentDidMount() {
-    this.api.user.show(this.state.user.user_id).then((user) => {
+    this.api.user.show(this.state.id).then((user) => {
       user.created_at = moment(user.created_at).format('l');
+      user.biography = user.biography.slice(0, 256);
       this.setState({user: user});
-    });
-    this.api.user.topics(this.state.user.user_id).then((data) => {
-      this.setState({topics: data});
+      this.api.user.topics(this.state.id).then((data) => {
+        this.setState({topics: data});
+      });
     });
   }
 
@@ -29,7 +31,7 @@ class UserShow extends Component {
     let state = this.state;
     const topics = state.topics.map((topic) => {
       return (
-        <TopicItem topic={topic} key={topic.topic_id}/>
+        <TopicItem topic={topic} key={topic.topic_id} profile={true}/>
       )
     });
 
@@ -42,6 +44,9 @@ class UserShow extends Component {
         <div className={style.created}>
           Joined {state.user.created_at}
         </div>
+        <div className={style.biography}>
+          {state.user.biography}
+        </div>
       </div>
     );
 
@@ -51,13 +56,18 @@ class UserShow extends Component {
           {profile}
         </aside>
         <main className='column main'>
-          <ul className={style.topics}>
-            {topics}
-          </ul>
+          <div className={style.topics}>
+            <div className={style.header}>
+              {i18n.t('user.topics')}
+            </div>
+            <ul>
+              {topics}
+            </ul>
+          </div>
         </main>
       </div>
     )
   }
 }
 
-export default UserShow;
+export default Show;

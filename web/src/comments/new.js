@@ -1,4 +1,4 @@
-import style from './/index.scss';
+import style from './index.scss';
 import React, {Component} from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api/index.js';
@@ -7,10 +7,16 @@ import LoadingView from '../loading/loading.js';
 class CommentNew extends Component {
   constructor(props) {
     super(props);
+
     this.api = new API();
+    this.state = {
+      topic_id: props.topicId,
+      body: '',
+      submitting: false
+    }
+
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-    this.state = {topic_id: props.topicId, body: '', submitting: false};
   }
 
   handleChange(e) {
@@ -36,7 +42,11 @@ class CommentNew extends Component {
   render() {
     let state = this.state;
     if (!this.api.user.loggedIn()) {
-      return ''
+      return (
+        <div className={style.custom}>
+          {i18n.t('comment.custom')}
+        </div>
+      )
     }
     return (
       <div className={style.form}>
